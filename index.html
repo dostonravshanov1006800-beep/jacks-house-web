@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🎃 JACK'S HOUSE</title>
+<style>
+:root{
+  --orange:#ff9632; --red:#ff3c3c; --dark:#0c0909;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;}
+html,body{width:100%;height:100%;overflow:hidden;background:#050404;font-family:'Segoe UI',system-ui,sans-serif;}
+#game{position:absolute;inset:0;}
+/* ---------- ВИНЕТКА ---------- */
+#vignette{position:absolute;inset:0;pointer-events:none;z-index:3;
+  background:radial-gradient(ellipse at center, transparent 52%, rgba(0,0,0,.55) 82%, rgba(0,0,0,.9) 100%);}
+/* ---------- HUD ---------- */
+#hud{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:min(330px,74vw);
+  background:rgba(12,9,9,.72);border:1.5px solid rgba(255,150,50,.55);border-radius:16px;
+  padding:10px 14px 12px;z-index:4;text-align:center;}
+#phase{color:var(--orange);font-weight:900;font-size:15px;letter-spacing:.5px;text-shadow:0 0 12px rgba(255,150,50,.4);}
+#barBg{height:10px;background:#1e1610;border-radius:99px;margin:8px 0 6px;overflow:hidden;}
+#barFill{height:100%;width:0%;border-radius:99px;transition:width .5s;
+  background:linear-gradient(90deg,#ffc850,#ff9632);box-shadow:0 0 10px rgba(255,150,50,.6);}
+#doors{color:#ffe1b4;font-size:12px;font-weight:700;}
+#candyPill{position:absolute;top:14px;right:14px;z-index:4;background:rgba(12,9,9,.72);
+  border:1.5px solid rgba(255,90,90,.55);border-radius:99px;padding:8px 16px;
+  color:#ff7878;font-weight:900;font-size:16px;}
+#timer{position:absolute;top:14px;left:14px;z-index:4;background:rgba(12,9,9,.72);
+  border:1.5px solid rgba(255,150,50,.35);border-radius:99px;padding:8px 14px;
+  color:#ffcf8f;font-weight:700;font-size:13px;}
+#prox{position:absolute;top:16%;left:50%;transform:translateX(-50%);z-index:4;
+  color:var(--red);font-weight:900;font-size:24px;letter-spacing:1px;display:none;
+  animation:pulse .8s infinite;text-shadow:0 0 18px rgba(255,60,60,.8);}
+@keyframes pulse{0%,100%{opacity:1;transform:translateX(-50%) scale(1);}50%{opacity:.35;transform:translateX(-50%) scale(1.08);}}
+#prompt{position:absolute;bottom:22%;left:50%;transform:translateX(-50%);z-index:4;display:none;
+  color:#ffe1b4;background:rgba(12,9,9,.85);border:1.5px solid rgba(255,150,50,.6);
+  border-radius:12px;padding:10px 20px;font-weight:900;font-size:15px;animation:pulse 1.2s infinite;}
+/* ---------- КНОПКИ МОБИЛЬНЫЕ ---------- */
+.tbtn{position:absolute;z-index:5;background:rgba(12,9,9,.75);color:#ffd278;
+  border:1.5px solid rgba(255,210,120,.55);border-radius:50%;font-size:24px;
+  width:62px;height:62px;display:flex;align-items:center;justify-content:center;font-weight:900;}
+#torchBtn{right:16px;bottom:16px;}
+#doorBtn{right:92px;bottom:16px;border-color:rgba(255,150,50,.9);color:var(--orange);opacity:.35;}
+#doorBtn.active{opacity:1;animation:pulse 1s infinite;}
+#joy{position:absolute;z-index:5;left:0;bottom:0;width:45%;height:60%;display:none;}
+#joyKnob{position:absolute;width:96px;height:96px;border-radius:50%;background:rgba(255,255,255,.08);
+  border:1.5px solid rgba(255,255,255,.18);display:none;}
+/* ---------- ОВЕРЛЕИ ---------- */
+.overlay{position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;text-align:center;padding:24px;}
+#startOv{background:radial-gradient(ellipse at center,#1a0f08 0%,#050404 75%);}
+#startOv h1{color:var(--orange);font-size:clamp(34px,9vw,64px);font-weight:900;letter-spacing:2px;
+  text-shadow:0 0 30px rgba(255,150,50,.5),0 4px 0 #3a2408;}
+#startOv .sub{color:#c9a06a;margin:10px 0 6px;font-size:15px;font-weight:700;}
+#startOv .rules{color:#8a7258;font-size:13px;line-height:1.75;max-width:420px;margin-bottom:26px;}
+.bigBtn{background:linear-gradient(180deg,#ffab52,#e87f1e);border:none;border-radius:14px;
+  color:#231204;font-weight:900;font-size:19px;padding:16px 44px;cursor:pointer;
+  box-shadow:0 6px 0 #7a4a10,0 0 30px rgba(255,150,50,.35);letter-spacing:.5px;}
+.bigBtn:active{transform:translateY(4px);box-shadow:0 2px 0 #7a4a10;}
+#deathOv{background:rgba(60,0,0,.55);display:none;animation:flash .4s;}
+@keyframes flash{0%{background:rgba(255,40,40,.75);}100%{background:rgba(60,0,0,.55);}}
+#deathOv h1{color:var(--red);font-size:clamp(40px,11vw,80px);font-weight:900;
+  text-shadow:0 0 40px rgba(255,60,60,.8);}
+#deathOv p,#winOv p{color:#ffd9c9;margin:12px 0 24px;font-size:16px;font-weight:700;}
+#winOv{background:rgba(10,20,5,.6);display:none;}
+#winOv h1{color:#9fe870;font-size:clamp(34px,9vw,64px);font-weight:900;text-shadow:0 0 30px rgba(120,230,80,.5);}
+#best{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);color:#6b5843;font-size:12px;font-weight:700;}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="vignette"></div>
+<div id="hud">
+  <div id="phase">🎃 Ждём храбреца...</div>
+  <div id="barBg"><div id="barFill"></div></div>
+  <div id="doors">🚪 Двери: 0 / 12</div>
+</div>
+<div id="candyPill">🍬 0</div>
+<div id="timer">⏱ 0:00</div>
+<div id="prox">⚠ ОН РЯДОМ ⚠</div>
+<div id="prompt">Открыть дверь [E]</div>
+<div id="joy"><div id="joyKnob"></div></div>
+<button class="tbtn" id="doorBtn">🚪</button>
+<button class="tbtn" id="torchBtn">🔦</button>
+
+<div class="overlay" id="startOv">
+  <h1>🎃 JACK'S HOUSE</h1>
+  <div class="sub">12 дверей. Один дом. И ОН уже слышал тебя.</div>
+  <div class="rules">
+    Беги через 12 дверей к выходу. Конфеты = очки (+5 за дверь, +25 за побег).<br>
+    После 3-й двери просыпается монстр — беги, он проходит сквозь стены.<br>
+    Каждые 40 секунд свет гаснет: жми 🔦 (или F) и свети прямо в него — он застынет.<br>
+    <span style="color:#ff9632">WASD / стрелки</span> — движение, <span style="color:#ff9632">E</span> — дверь. На телефоне: джойстик слева.
+  </div>
+  <button class="bigBtn" id="startBtn">ВОЙТИ В ДОМ 🎃</button>
+  <div id="best"></div>
+</div>
+
+<div class="overlay" id="deathOv">
+  <h1>💀 ТЫ МЕРТВ</h1>
+  <p id="deathStats"></p>
+  <button class="bigBtn" onclick="restart()">ЕЩЁ РАЗ</button>
+</div>
+
+<div class="overlay" id="winOv">
+  <h1>🏁 ТЫ ВЫБРАЛСЯ!</h1>
+  <p id="winStats"></p>
+  <button class="bigBtn" onclick="restart()">СНОВА В ДОМ</button>
+</div>
+
+<script>
+"use strict";
+/* ================= КОНФИГ (зеркало GameConfig из Roblox-версии) ================= */
+var CFG = {
+  ROOMS: 12, ROOM_W: 900, ROOM_H: 520, WALL: 16,
+  DOOR_GAP: 190,            // высота дверного проёма
+  PLAYER_SPEED: 250,        // px/сек (Roblox: 16)
+  MONSTER_BASE: 170,        // база монстра (Roblox: 13)
+  MONSTER_PER_DOOR: 9,      // монстр ускоряется с каждой дверью
+  BLACKOUT_MULT: 1.25,      // во тьме быстрее (Roblox: 20 против 16)
+  BLACKOUT_EVERY: 40, BLACKOUT_TIME: 8,
+  MONSTER_AFTER_DOOR: 2,    // просыпается после 2 дверей
+  DOOR_CANDY: 5, SURVIVE_BONUS: 25, CANDY_PER_ROOM: 3,
+  PROXIMITY: 220, KILL_DIST: 26,
+  LIGHT_RADIUS: 130, PUMPKIN_LIGHT: 60
+};
+
+/* ================= CANVAS ================= */
+var cv = document.getElementById("game"), ctx = cv.getContext("2d");
+var lightCv = document.createElement("canvas"), lctx = lightCv.getContext("2d");
+var W = 0, H = 0, zoom = 1;
+function resize(){
+  W = cv.width = lightCv.width = innerWidth;
+  H = cv.height = lightCv.height = innerHeight;
+  zoom = H / 640; if (W/zoom > 1500) zoom = W / 1500;
+}
+addEventListener("resize", resize); resize();
+
+/* ================= МИР ================= */
+var WORLD_W = CFG.ROOMS * CFG.ROOM_W + CFG.WALL;
+var walls = [];   // {x,y,w,h}
+var doors = [];   // {k,x,y,w,h,open,anim}
+var candles = []; // {x,y,base}
+var pumpkins = [];
+var candies = []; // {x,y,taken}
+
+function buildWorld(){
+  walls.length = doors.length = candles.length = pumpkins.length = candies.length = 0;
+  // верх и низ
+  walls.push({x:0,y:0,w:WORLD_W,h:CFG.WALL});
+  walls.push({x:0,y:CFG.ROOM_H-CFG.WALL,w:WORLD_W,h:CFG.WALL});
+  // левая стена
+  walls.push({x:0,y:0,w:CFG.WALL,h:CFG.ROOM_H});
+  // вертикальные стены с дверным проёмом
+  for (var k = 1; k <= CFG.ROOMS; k++){
+    var x = k * CFG.ROOM_W;
+    var gapY = (CFG.ROOM_H - CFG.DOOR_GAP) / 2;
+    walls.push({x:x, y:CFG.WALL, w:CFG.WALL, h:gapY - CFG.WALL});
+    walls.push({x:x, y:gapY + CFG.DOOR_GAP, w:CFG.WALL, h:CFG.ROOM_H - CFG.WALL - gapY - CFG.DOOR_GAP});
+    doors.push({k:k, x:x, y:gapY, w:CFG.WALL, h:CFG.DOOR_GAP, open:false, anim:0});
+    // тыквы у двери
+    pumpkins.push({x:x-38, y:gapY+34, r:14});
+    pumpkins.push({x:x-38, y:gapY+CFG.DOOR_GAP-34, r:14});
+  }
+  // свечи на стенах каждой комнаты
+  for (var i = 0; i < CFG.ROOMS; i++){
+    var cx = i * CFG.ROOM_W + CFG.ROOM_W / 2;
+    candles.push({x:cx, y:CFG.WALL + 10});
+    candles.push({x:cx, y:CFG.ROOM_H - CFG.WALL - 10});
+  }
+  // конфеты (детерминированные позиции)
+  var seed = 1337;
+  function rnd(){ seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
+  for (var i2 = 0; i2 < CFG.ROOMS; i2++){
+    for (var c = 0; c < CFG.CANDY_PER_ROOM; c++){
+      candies.push({x:i2*CFG.ROOM_W + 150 + rnd()*(CFG.ROOM_W-300), y:80 + rnd()*(CFG.ROOM_H-160), taken:false});
+    }
+  }
+}
+
+/* ================= ИГРОК / МОНСТР / СОСТОЯНИЕ ================= */
+var P, M, G;
+var candyTotal = parseInt(localStorage.getItem("jh_candy") || "0");
+var bestDoors = parseInt(localStorage.getItem("jh_best") || "0");
+document.getElementById("best").textContent = bestDoors > 0 ? ("Твой рекорд: " + bestDoors + " дверей · Конфет собрано: " + candyTotal) : "";
+
+function newGame(){
+  buildWorld();
+  P = {x: 120, y: CFG.ROOM_H/2, r: 13, dx: 1, dy: 0, dead: false, won: false};
+  M = {x: -300, y: CFG.ROOM_H/2, r: 16, active: false, frozen: 0};
+  G = {phase:"play", doors:0, candy:0, t:0, blackout:false,
+       nextBlackout: CFG.BLACKOUT_EVERY - 15, blackoutUntil: 0,
+       torch:false, shake:0, msg:"", msgT:0};
+  updateHUD();
+}
+
+function restart(){
+  document.getElementById("deathOv").style.display = "none";
+  document.getElementById("winOv").style.display = "none";
+  newGame();
+}
+
+/* ================= ВВОД ================= */
+var keys = {};
+addEventListener("keydown", function(e){
+  keys[e.key.toLowerCase()] = true;
+  if (e.key.toLowerCase() === "f") toggleTorch();
+  if (e.key.toLowerCase() === "e") tryOpenDoor();
+});
+addEventListener("keyup", function(e){ keys[e.key.toLowerCase()] = false; });
+
+var mouse = {x: innerWidth/2, y: innerHeight/2};
+addEventListener("mousemove", function(e){ mouse.x = e.clientX; mouse.y = e.clientY; });
+
+/* джойстик (мобильный) */
+var isTouch = ("ontouchstart" in window);
+var joy = document.getElementById("joy"), knob = document.getElementById("joyKnob");
+var joyId = -1, joyStart = {x:0,y:0}, joyVec = {x:0,y:0};
+if (isTouch) joy.style.display = "block";
+joy.addEventListener("touchstart", function(e){
+  var t = e.changedTouches[0];
+  joyId = t.identifier; joyStart = {x: t.clientX, y: t.clientY};
+  knob.style.display = "block";
+  knob.style.left = (t.clientX-48)+"px"; knob.style.top = (t.clientY-48)+"px";
+  e.preventDefault();
+});
+joy.addEventListener("touchmove", function(e){
+  for (var i = 0; i < e.changedTouches.length; i++){
+    var t = e.changedTouches[i];
+    if (t.identifier === joyId){
+      var dx = t.clientX - joyStart.x, dy = t.clientY - joyStart.y;
+      var d = Math.hypot(dx, dy); if (d > 55){ dx = dx/d*55; dy = dy/d*55; }
+      joyVec.x = dx/55; joyVec.y = dy/55;
+      knob.style.left = (joyStart.x + dx - 48)+"px";
+      knob.style.top = (joyStart.y + dy - 48)+"px";
+    }
+  }
+  e.preventDefault();
+});
+function joyEnd(e){
+  for (var i = 0; i < e.changedTouches.length; i++)
+    if (e.changedTouches[i].identifier === joyId){ joyId = -1; joyVec = {x:0,y:0}; knob.style.display = "none"; }
+}
+joy.addEventListener("touchend", joyEnd); joy.addEventListener("touchcancel", joyEnd);
+
+function toggleTorch(){ if (G && G.phase === "play"){ G.torch = !G.torch; } }
+document.getElementById("torchBtn").addEventListener("click", toggleTorch);
+document.getElementById("doorBtn").addEventListener("click", tryOpenDoor);
+
+/* ================= ДВЕРИ ================= */
+function doorCenter(d){ return {x: d.x + d.w/2, y: d.y + d.h/2}; }
+
+function nearDoor(){
+  if (!G) return null;
+  for (var i = 0; i < doors.length; i++){
+    var d = doors[i], c = doorCenter(d);
+    if (Math.hypot(P.x - c.x, P.y - c.y) < 70) return d;
+  }
+  return null;
+}
+function tryOpenDoor(){
+  if (!G || G.phase !== "play") return;
+  var d = nearDoor();
+  if (!d || d.open) return;
+  if (d.k !== G.doors + 1){ showMsg("Заперто. Сначала дверь " + G.doors + "!"); return; }
+  d.open = true; d.anim = 0;
+  G.doors++;
+  G.candy += CFG.DOOR_CANDY; candyTotal += CFG.DOOR_CANDY;
+  saveLS();
+  sfx.creak();
+  showMsg(d.k === CFG.ROOMS ? "ВЫХОД?! БЕГИ!" : "Дверь " + d.k + " открыта... +🍬" + CFG.DOOR_CANDY);
+  updateHUD();
+}
+function showMsg(t){ G.msg = t; G.msgT = 2.2; }
+
+/* ================= СТОЛКНОВЕНИЯ ================= */
+function collide(nx, ny){
+  var r = P.r;
+  for (var i = 0; i < walls.length; i++){
+    var w = walls[i];
+    if (nx + r > w.x && nx - r < w.x + w.w && ny + r > w.y && ny - r < w.y + w.h) return true;
+  }
+  for (var j = 0; j < doors.length; j++){
+    var d = doors[j];
+    if (!d.open || d.anim < 0.9){
+      if (nx + r > d.x && nx - r < d.x + d.w && ny + r > d.y && ny - r < d.y + d.h) return true;
+    }
+  }
+  return false;
+}
+
+/* ================= ЗВУК (WebAudio синтез) ================= */
+var AC = null;
+function audio(){ if (!AC){ try{ AC = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } return AC; }
+var sfx = {
+  creak: function(){
+    var a = audio(); if (!a) return;
+    var o = a.createOscillator(), g = a.createGain();
+    o.type = "sawtooth"; o.frequency.setValueAtTime(210, a.currentTime);
+    o.frequency.exponentialRampToValueAtTime(70, a.currentTime + 0.5);
+    g.gain.setValueAtTime(0.12, a.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + 0.5);
+    o.connect(g).connect(a.destination); o.start(); o.stop(a.currentTime + 0.5);
+  },
+  thump: function(vol){
+    var a = audio(); if (!a) return;
+    var o = a.createOscillator(), g = a.createGain();
+    o.type = "sine"; o.frequency.setValueAtTime(55, a.currentTime);
+    o.frequency.exponentialRampToValueAtTime(30, a.currentTime + 0.12);
+    g.gain.setValueAtTime(vol, a.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + 0.15);
+    o.connect(g).connect(a.destination); o.start(); o.stop(a.currentTime + 0.16);
+  },
+  scare: function(){
+    var a = audio(); if (!a) return;
+    var o = a.createOscillator(), g = a.createGain();
+    o.type = "square"; o.frequency.setValueAtTime(90, a.currentTime);
+    o.frequency.exponentialRampToValueAtTime(35, a.currentTime + 0.8);
+    g.gain.setValueAtTime(0.3, a.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + 0.9);
+    o.connect(g).connect(a.destination); o.start(); o.stop(a.currentTime + 0.9);
+  },
+  win: function(){
+    var a = audio(); if (!a) return;
+    [523, 659, 784, 1046].forEach(function(f, i){
+      var o = a.createOscillator(), g = a.createGain();
+      o.type = "triangle"; o.frequency.value = f;
+      g.gain.setValueAtTime(0.12, a.currentTime + i*0.13);
+      g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + i*0.13 + 0.3);
+      o.connect(g).connect(a.destination); o.start(a.currentTime + i*0.13); o.stop(a.currentTime + i*0.13 + 0.32);
+    });
+  }
+};
+var beatT = 0;
+
+/* ================= HUD ================= */
+var el = {
+  phase: document.getElementById("phase"), bar: document.getElementById("barFill"),
+  doors: document.getElementById("doors"), candy: document.getElementById("candyPill"),
+  prox: document.getElementById("prox"), prompt: document.getElementById("prompt"),
+  timer: document.getElementById("timer"), doorBtn: document.getElementById("doorBtn")
+};
+function updateHUD(){
+  if (!G) return;
+  el.doors.textContent = "🚪 Двери: " + G.doors + " / " + CFG.ROOMS;
+  el.bar.style.width = (G.doors / CFG.ROOMS * 100) + "%";
+  el.candy.textContent = "🍬 " + (candyTotal);
+  el.phase.textContent = G.blackout ? "🕯 СВЕТ ПОГАС — СВЕТИ В НЕГО!" : "🏠 Беги к выходу!";
+}
+function saveLS(){
+  localStorage.setItem("jh_candy", candyTotal);
+  if (G.doors > bestDoors){ bestDoors = G.doors; localStorage.setItem("jh_best", bestDoors); }
+}
+
+/* ================= ОБНОВЛЕНИЕ ================= */
+function update(dt){
+  if (G.phase !== "play") return;
+  G.t += dt;
+  if (G.msgT > 0) G.msgT -= dt;
+
+  // ---- ввод движения ----
+  var ix = 0, iy = 0;
+  if (keys["w"] || keys["arrowup"] || keys["ц"]) iy -= 1;
+  if (keys["s"] || keys["arrowdown"] || keys["ы"]) iy += 1;
+  if (keys["a"] || keys["arrowleft"] || keys["ф"]) ix -= 1;
+  if (keys["d"] || keys["arrowright"] || keys["в"]) ix += 1;
+  ix += joyVec.x; iy += joyVec.y;
+  var il = Math.hypot(ix, iy);
+  if (il > 1){ ix /= il; iy /= il; }
+  var sp = CFG.PLAYER_SPEED * dt;
+  var nx = P.x + ix * sp, ny = P.y + iy * sp;
+  if (!collide(nx, P.y)) P.x = nx;
+  if (!collide(P.x, ny)) P.y = ny;
+  if (ix || iy){ var l2 = Math.hypot(ix,iy); P.dx = ix/l2; P.dy = iy/l2; }
+
+  // ---- фонарик: направление (мышь на десктопе) ----
+  if (!isTouch){
+    var wpt = screenToWorld(mouse.x, mouse.y);
+    var mdx = wpt.x - P.x, mdy = wpt.y - P.y, ml = Math.hypot(mdx, mdy);
+    if (ml > 5){ P.dx = mdx/ml; P.dy = mdy/ml; }
+  }
+
+  // ---- конфеты ----
+  for (var i = 0; i < candies.length; i++){
+    var c = candies[i];
+    if (!c.taken && Math.hypot(P.x - c.x, P.y - c.y) < 26){
+      c.taken = true; G.candy += CFG.DOOR_CANDY; candyTotal += CFG.DOOR_CANDY;
+      saveLS(); updateHUD();
+    }
+  }
+
+  // ---- анимация дверей ----
+  for (var j = 0; j < doors.length; j++){
+    var d = doors[j];
+    if (d.open && d.anim < 1) d.anim = Math.min(1, d.anim + dt / 0.9);
+  }
+
+  // ---- блэкаут ----
+  if (!G.blackout && G.t >= G.nextBlackout){
+    G.blackout = true;
+    G.blackoutUntil = G.t + CFG.BLACKOUT_TIME;
+    sfx.thump(0.25); showMsg("СВЕТ ПОГАС... ОН БЫСТРЕЕ. СВЕТИ В НЕГО!");
+  } else if (G.blackout && G.t >= G.blackoutUntil){
+    G.blackout = false;
+    G.nextBlackout = G.t + CFG.BLACKOUT_EVERY;
+  }
+
+  // ---- монстр ----
+  if (!M.active && G.doors >= CFG.MONSTER_AFTER_DOOR){
+    M.active = true; M.x = -100; M.y = CFG.ROOM_H / 2;
+    sfx.thump(0.35); showMsg("ОН ПРОСНУЛСЯ. БЕГИ.");
+  }
+  var prox = el.prox;
+  if (M.active){
+    var dx = P.x - M.x, dy = P.y - M.y, dist = Math.hypot(dx, dy);
+    var inCone = false;
+    if (G.torch && G.blackout){
+      var fdot = (P.dx * -dx + P.dy * -dy) / (dist || 1);
+      inCone = dist < 380 && fdot > 0.82;
+    }
+    if (inCone){ M.frozen = 0.6; }
+    if (M.frozen > 0){ M.frozen -= dt; }
+    else {
+      var spd = (CFG.MONSTER_BASE + CFG.MONSTER_PER_DOOR * G.doors) * (G.blackout ? CFG.BLACKOUT_MULT : 1);
+      if (dist > 1){ M.x += dx / dist * spd * dt; M.y += dy / dist * spd * dt; }
+    }
+    // сердцебиение
+    if (dist < CFG.PROXIMITY * 1.4){
+      beatT -= dt;
+      if (beatT <= 0){ sfx.thump(0.08 + 0.14 * (1 - dist/(CFG.PROXIMITY*1.4))); beatT = 0.25 + dist/300; }
+    }
+    prox.style.display = dist < CFG.PROXIMITY ? "block" : "none";
+    if (dist < CFG.KILL_DIST){ die(); return; }
+  } else prox.style.display = "none";
+
+  // ---- подсказка двери ----
+  var nd = nearDoor();
+  var showPrompt = nd && !nd.open && G.phase === "play";
+  el.prompt.style.display = showPrompt ? "block" : "none";
+  if (showPrompt && nd.k !== G.doors + 1)
+    el.prompt.textContent = "Заперто — дверь " + G.doors + " осталась позади";
+  else el.prompt.textContent = isTouch ? "Жми 🚪" : "Открыть дверь [E]";
+  el.doorBtn.className = "tbtn" + (showPrompt ? " active" : "");
+
+  // ---- победа: зашли за правую стену ----
+  if (P.x > WORLD_W - CFG.WALL - P.r + 2){ win(); return; }
+
+  // ---- таймер/HUD ----
+  var mm = Math.floor(G.t / 60), ss = Math.floor(G.t % 60);
+  el.timer.textContent = "⏱ " + mm + ":" + (ss < 10 ? "0" : "") + ss;
+  if (G.blackout) updateHUD();
+}
+
+function die(){
+  G.phase = "dead";
+  sfx.scare();
+  el.prox.style.display = "none"; el.prompt.style.display = "none";
+  document.getElementById("deathStats").textContent =
+    "Дверей пройдено: " + G.doors + " / " + CFG.ROOMS + " · 🍬 за забег: " + G.candy;
+  document.getElementById("deathOv").style.display = "flex";
+  saveLS();
+}
+function win(){
+  G.phase = "won";
+  sfx.win();
+  candyTotal += CFG.SURVIVE_BONUS; G.candy += CFG.SURVIVE_BONUS;
+  bestDoors = CFG.ROOMS; saveLS();
+  el.prox.style.display = "none"; el.prompt.style.display = "none";
+  var mm = Math.floor(G.t / 60), ss = Math.floor(G.t % 60);
+  document.getElementById("winStats").textContent =
+    "Все 12 дверей · 🍬 +" + CFG.SURVIVE_BONUS + " · время " + mm + ":" + (ss < 10 ? "0" : "") + ss;
+  document.getElementById("winOv").style.display = "flex";
+  updateHUD();
+}
+
+/* ================= РЕНДЕР ================= */
+function screenToWorld(sx, sy){
+  var camX = P ? clamp(P.x - (W/zoom)/2, -200, WORLD_W + 200 - W/zoom) : 0;
+  var camY = P ? clamp(P.y - (H/zoom)/2, -100, CFG.ROOM_H + 100 - H/zoom) : 0;
+  return {x: camX + sx/zoom, y: camY + sy/zoom};
+}
+function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+
+var t0 = 0;
+function render(ts){
+  requestAnimationFrame(render);
+  if (!P){ return; }
+  var dt = Math.min(0.05, (ts - t0) / 1000 || 0.016); t0 = ts;
+  if (G.phase === "play") update(dt);
+
+  var camX = clamp(P.x - (W/zoom)/2, -200, WORLD_W + 200 - W/zoom);
+  var camY = clamp(P.y - (H/zoom)/2, -100, CFG.ROOM_H + 100 - H/zoom);
+  if (G.shake > 0){ camX += (Math.random()-0.5)*8; camY += (Math.random()-0.5)*8; G.shake -= dt; }
+
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.fillStyle = "#030202"; ctx.fillRect(0,0,W,H);
+  ctx.setTransform(zoom,0,0,zoom,-camX*zoom,-camY*zoom);
+
+  var vx0 = camX - 50, vx1 = camX + W/zoom + 50;
+
+  // ---- пол ----
+  for (var i = Math.floor(vx0 / CFG.ROOM_W); i <= Math.floor(vx1 / CFG.ROOM_W) && i < CFG.ROOMS; i++){
+    var rx = i * CFG.ROOM_W;
+    ctx.fillStyle = "#3d2916"; ctx.fillRect(rx, CFG.WALL, CFG.ROOM_W, CFG.ROOM_H - 2*CFG.WALL);
+    ctx.strokeStyle = "rgba(0,0,0,0.35)"; ctx.lineWidth = 2;
+    for (var px = rx + 90; px < rx + CFG.ROOM_W; px += 90){
+      ctx.beginPath(); ctx.moveTo(px, CFG.WALL); ctx.lineTo(px, CFG.ROOM_H - CFG.WALL); ctx.stroke();
+    }
+    // доски по краям комнаты
+    ctx.strokeStyle = "rgba(0,0,0,0.5)"; ctx.lineWidth = 4;
+    ctx.strokeRect(rx + 2, CFG.WALL + 2, CFG.ROOM_W - 4, CFG.ROOM_H - 2*CFG.WALL - 4);
+    // ковёр
+    ctx.fillStyle = "rgba(120,30,30,0.25)";
+    ctx.beginPath(); ctx.ellipse(rx + CFG.ROOM_W/2, CFG.ROOM_H/2, 130, 90, 0, 0, Math.PI*2); ctx.fill();
+    // картины на стенах
+    ctx.fillStyle = "#1a120c";
+    ctx.fillRect(rx + 180, CFG.WALL + 8, 46, 34);
+    ctx.fillRect(rx + CFG.ROOM_W - 226, CFG.ROOM_H - CFG.WALL - 42, 46, 34);
+    ctx.fillStyle = "rgba(255,150,50,0.12)";
+    ctx.fillRect(rx + 183, CFG.WALL + 11, 40, 28);
+  }
+
+  // ---- стены ----
+  ctx.fillStyle = "#3a3842";
+  for (var wi = 0; wi < walls.length; wi++){
+    var w = walls[wi];
+    if (w.x > vx1 || w.x + w.w < vx0) continue;
+    ctx.fillRect(w.x, w.y, w.w, w.h);
+  }
+  // панели (нижние тёмные полосы)
+  ctx.fillStyle = "rgba(20,14,10,0.8)";
+  ctx.fillRect(0, CFG.ROOM_H - CFG.WALL - 26, WORLD_W, 26);
+  ctx.fillRect(0, CFG.WALL, WORLD_W, 20);
+
+  // ---- двери ----
+  for (var di = 0; di < doors.length; di++){
+    var d = doors[di];
+    if (d.x > vx1 || d.x < vx0 - 60) continue;
+    // рама
+    ctx.fillStyle = "#231a14";
+    ctx.fillRect(d.x - 8, d.y - 12, d.w + 16, 14);
+    ctx.fillRect(d.x - 8, d.y + d.h - 2, d.w + 16, 14);
+    ctx.fillRect(d.x - 10, d.y - 12, 8, d.h + 24);
+    ctx.fillRect(d.x + d.w + 2, d.y - 12, 8, d.h + 24);
+    // само полотно (уезжает вниз)
+    var slide = d.open ? d.h * d.anim : 0;
+    ctx.fillStyle = "#58341e";
+    ctx.fillRect(d.x, d.y + slide, d.w, d.h);
+    ctx.fillStyle = "rgba(0,0,0,0.3)";
+    ctx.fillRect(d.x, d.y + slide, d.w, 10);
+    // ручка
+    ctx.fillStyle = d.open ? "rgba(30,30,35,0.5)" : "#14141a";
+    ctx.beginPath();
+    ctx.arc(d.x + d.w/2, d.y + slide + d.h/2, 4, 0, Math.PI*2); ctx.fill();
+  }
+
+  // ---- тыквы ----
+  for (var pi = 0; pi < pumpkins.length; pi++){
+    var pk = pumpkins[pi];
+    if (pk.x < vx0 - 30 || pk.x > vx1) continue;
+    ctx.fillStyle = "#ff7814";
+    ctx.beginPath(); ctx.ellipse(pk.x, pk.y, pk.r, pk.r*0.85, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = "#3c7828";
+    ctx.fillRect(pk.x - 2, pk.y - pk.r - 6, 4, 8);
+    // глазки
+    ctx.fillStyle = "#401500";
+    ctx.beginPath();
+    ctx.moveTo(pk.x - 7, pk.y - 4); ctx.lineTo(pk.x - 2, pk.y - 6); ctx.lineTo(pk.x - 6, pk.y - 1); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(pk.x + 7, pk.y - 4); ctx.lineTo(pk.x + 2, pk.y - 6); ctx.lineTo(pk.x + 6, pk.y - 1); ctx.fill();
+  }
+
+  // ---- конфеты ----
+  for (var ci = 0; ci < candies.length; ci++){
+    var cd = candies[ci];
+    if (cd.taken || cd.x < vx0 || cd.x > vx1) continue;
+    var bob = Math.sin(ts/300 + ci) * 3;
+    ctx.fillStyle = "#ffb84d";
+    ctx.beginPath(); ctx.ellipse(cd.x, cd.y + bob, 9, 7, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(cd.x - 1.5, cd.y + bob - 7, 3, 4);
+    ctx.fillStyle = "rgba(255,255,255,0.5)";
+    ctx.beginPath(); ctx.arc(cd.x - 3, cd.y + bob - 2, 2.5, 0, Math.PI*2); ctx.fill();
+  }
+
+  // ---- свечи ----
+  for (var si = 0; si < candles.length; si++){
+    var cd2 = candles[si];
+    if (cd2.x < vx0 || cd2.x > vx1) continue;
+    var fl = 0.85 + Math.random() * 0.3;
+    ctx.fillStyle = "#fff0c8";
+    ctx.fillRect(cd2.x - 3, cd2.y - 7, 6, 12);
+    ctx.fillStyle = "rgba(255,170,60," + (0.8 * fl) + ")";
+    ctx.beginPath(); ctx.ellipse(cd2.x, cd2.y - 11, 3, 5 + fl*2, 0, 0, Math.PI*2); ctx.fill();
+  }
+
+  // ---- игрок ----
+  ctx.fillStyle = "#e8d5b0";
+  ctx.beginPath(); ctx.arc(P.x, P.y, P.r, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = "#221a10";
+  ctx.beginPath(); ctx.arc(P.x + P.dx*5 - P.dy*4, P.y + P.dy*5 + P.dx*4, 2.4, 0, Math.PI*2);
+  ctx.arc(P.x + P.dx*5 + P.dy*4, P.y + P.dy*5 - P.dx*4, 2.4, 0, Math.PI*2); ctx.fill();
+
+  // ---- монстр ----
+  if (M.active){
+    var sh = M.frozen > 0 ? (Math.random()-0.5) * 5 : 0;
+    var gr = ctx.createRadialGradient(M.x, M.y, 4, M.x, M.y, 60);
+    gr.addColorStop(0, "rgba(255,40,40,0.25)");
+    gr.addColorStop(1, "rgba(255,40,40,0)");
+    ctx.fillStyle = gr;
+    ctx.fillRect(M.x - 60, M.y - 60, 120, 120);
+    ctx.fillStyle = "#0a0a0e";
+    ctx.beginPath();
+    ctx.ellipse(M.x + sh, M.y, M.r + 8, M.r + 14, 0, 0, Math.PI*2);
+    ctx.moveTo(M.x + sh - 8, M.y + 6);
+    ctx.lineTo(M.x + sh - 14, M.y + 44);
+    ctx.lineTo(M.x + sh + 2, M.y + 30);
+    ctx.lineTo(M.x + sh + 12, M.y + 46);
+    ctx.lineTo(M.x + sh + 10, M.y + 6);
+    ctx.fill();
+    // глаза
+    var eyeB = 0.7 + Math.random() * 0.3;
+    ctx.fillStyle = "rgba(255,30,30," + eyeB + ")";
+    ctx.shadowColor = "#ff1e1e"; ctx.shadowBlur = 14;
+    ctx.beginPath(); ctx.arc(M.x - 6 + sh, M.y - 6, 3.4, 0, Math.PI*2);
+    ctx.arc(M.x + 6 + sh, M.y - 6, 3.4, 0, Math.PI*2); ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+
+  /* ---- СВЕТ: отдельный слой темноты ---- */
+  ctx.setTransform(1,0,0,1,0,0);
+  lctx.setTransform(1,0,0,1,0,0);
+  lctx.globalCompositeOperation = "source-over";
+  var darkA = G.blackout ? 0.985 : 0.82;
+  lctx.fillStyle = "rgba(2,1,3," + darkA + ")";
+  lctx.fillRect(0,0,W,H);
+  lctx.globalCompositeOperation = "destination-out";
+  lctx.setTransform(zoom,0,0,zoom,-camX*zoom,-camY*zoom);
+
+  function cut(x, y, r, soft){
+    var g = lctx.createRadialGradient(x, y, r*0.15, x, y, r);
+    g.addColorStop(0, "rgba(0,0,0,1)");
+    g.addColorStop(soft, "rgba(0,0,0,0.75)");
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    lctx.fillStyle = g;
+    lctx.beginPath(); lctx.arc(x, y, r, 0, Math.PI*2); lctx.fill();
+  }
+
+  if (!G.blackout){
+    for (var li = 0; li < candles.length; li++){
+      var L = candles[li];
+      if (L.x > camX - 150 && L.x < camX + W/zoom + 150)
+        cut(L.x, L.y, CFG.LIGHT_RADIUS * (0.9 + Math.random()*0.15), 0.4);
+    }
+    for (var lp = 0; lp < pumpkins.length; lp++){
+      var PL = pumpkins[lp];
+      if (PL.x > camX - 80 && PL.x < camX + W/zoom + 80) cut(PL.x, PL.y, CFG.PUMPKIN_LIGHT, 0.35);
+    }
+  }
+  cut(P.x, P.y, G.blackout ? 55 : 75, 0.3);
+  // фонарик — конус
+  if (G.torch){
+    var len = 380, ang = 0.42;
+    var g2 = lctx.createRadialGradient(P.x, P.y, 10, P.x, P.y, len);
+    g2.addColorStop(0, "rgba(0,0,0,1)");
+    g2.addColorStop(0.6, "rgba(0,0,0,0.85)");
+    g2.addColorStop(1, "rgba(0,0,0,0)");
+    lctx.fillStyle = g2;
+    lctx.beginPath();
+    lctx.moveTo(P.x, P.y);
+    var a0 = Math.atan2(P.dy, P.dx);
+    lctx.arc(P.x, P.y, len, a0 - ang, a0 + ang);
+    lctx.closePath(); lctx.fill();
+  }
+  ctx.drawImage(lightCv, 0, 0);
+}
+
+/* ================= СТАРТ ================= */
+document.getElementById("startBtn").addEventListener("click", function(){
+  audio();
+  document.getElementById("startOv").style.display = "none";
+  newGame();
+});
+requestAnimationFrame(render);
+</script>
+</body>
+</html>
